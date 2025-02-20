@@ -1,0 +1,29 @@
+A. Gmail-Related Prompts
+"Could you check my Gmail inbox?"
+"Show me the last 3 emails from my Promotions label."
+"Any unread messages in my Spam folder?"
+
+SUPPORT NEXT: "Check if I have any new email from 'Amazon'?"
+
+B. Calendar-Related Prompts
+"Create a new calendar event tomorrow at 2 PM called 'Team sync'."
+"What’s on my schedule for next week?"
+"Add a meeting on Friday from 9AM to 10AM with summary 'Project planning' at location 'Conference Room A'."
+"Remind me about my dentist appointment on August 25th at 11 AM. Put 'teeth cleaning' in the description."
+
+C. Tasks-Related Prompts
+"Create a new task: buy groceries, notes: milk and eggs, due: Monday at 5 PM."
+"Make a task to 'Finish the budget report' with notes 'check line items', due next Friday."
+"Show me all my tasks."
+"Add a to-do titled 'Pay electricity bill' and remind me tomorrow morning."
+
+D. Multi-Faceted or More Complex Prompts
+"Hey Orianna, can you set up a task to call John next Wednesday at noon, plus put it on my calendar as well?"
+"Do I have any new messages from the weekend, and also could you list out my tasks for this week?"
+"Create an event on August 29 at 3pm titled 'Project milestone discussion' and notes 'invite team leads'? Then make a task for me to follow up the next day."
+
+E. Test Edge Cases
+"Create a new task." (with no further detail)
+"Set a meeting on December 32nd at 2 PM" (invalid date)
+"Show me 100 emails from a label that doesn’t exist."
+"Add 'Pick up kids' to tasks, notes: bring snacks, due: 6pm"
