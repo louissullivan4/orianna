@@ -52,7 +52,6 @@ If user doesn't mention label, default to "INBOX".
 """
 
     def _check_inbox_flow(self, user_text: str) -> Dict[str, Any]:
-        # 1) LLM extraction
         tool_args = self._extract_params_via_llm(user_text)
 
         if "error" in tool_args:
@@ -62,7 +61,6 @@ If user doesn't mention label, default to "INBOX".
                 "message": f"LLM extraction error: {tool_args['error']}"
             }
 
-        # 2) Validate with Pydantic
         try:
             inbox_input = CheckGmailInboxInput(**tool_args)
         except Exception as e:
@@ -72,7 +70,6 @@ If user doesn't mention label, default to "INBOX".
                 "message": f"Invalid parameters: {str(e)}"
             }
 
-        # 3) Actually do the Gmail API call
         emails = self._check_gmail_inbox(label_id=inbox_input.label_id, max_results=inbox_input.max_results)
         return {
             "tool": self.get_name(),
