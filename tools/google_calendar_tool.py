@@ -58,11 +58,7 @@ Output ONLY JSON with fields:
 No extra text.
 """
 
-    # -----------------------------------------------------
-    # Create event flow
-    # -----------------------------------------------------
     def _create_event_flow(self, user_text: str) -> Dict[str, Any]:
-        # 1) Extract from LLM
         tool_args = self._extract_params_via_llm(user_text)
 
         if "error" in tool_args:
@@ -72,7 +68,6 @@ No extra text.
                 "message": f"LLM extraction error: {tool_args['error']}"
             }
 
-        # 2) Validate
         try:
             event_input = CreateCalendarEventInput(**tool_args)
         except Exception as e:
@@ -82,7 +77,6 @@ No extra text.
                 "message": f"Invalid parameters: {str(e)}"
             }
 
-        # 3) If no end_time, assume +1 hour
         if not event_input.end_time:
             parsed_start = dateparser.parse(event_input.start_time)
             if parsed_start:
@@ -94,7 +88,6 @@ No extra text.
                     "message": "Could not parse start_time for the event."
                 }
 
-        # 4) Create the event
         new_event = self._create_event_in_gcal(event_input)
         return {
             "tool": self.get_name(),
@@ -112,9 +105,6 @@ No extra text.
             "message": f"Found {len(events)} upcoming events."
         }
 
-    # -----------------------------------------------------
-    # Google Calendar logic
-    # -----------------------------------------------------
     def _create_event_in_gcal(self, event_input: CreateCalendarEventInput):
         service = self._get_calendar_service()
         event_body = {
