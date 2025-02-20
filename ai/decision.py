@@ -14,7 +14,6 @@ def decide_next_action(parsed_input: Dict[str, Any]) -> Dict[str, Any]:
     user_text = parsed_input.get("original_text", "")
     user_confidence_threshold = get_user_preference("louis", "min_confidence_threshold")
 
-    # For simplicity, let's do a simple confidence check
     if confidence < user_confidence_threshold:
         return {
             "tool": "none",
@@ -30,6 +29,5 @@ def decide_next_action(parsed_input: Dict[str, Any]) -> Dict[str, Any]:
             "message": f"No tool handles intent '{intent}'."
         }
 
-    # We pass 'intent' to the tool as well, so it knows which flow to use
     tool_response = tool.parse_and_execute(user_text, intent=intent)
     return tool_response
