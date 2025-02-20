@@ -52,14 +52,9 @@ Output ONLY JSON with fields:
 No extra text.
 """
 
-    # ------------------------------------------------
-    # Private flows
-    # ------------------------------------------------
     def _create_task_flow(self, user_text: str) -> Dict[str, Any]:
-        # 1) Extract LLM arguments
         tool_args = self._extract_params_via_llm(user_text)
 
-        # 2) Check for LLM errors
         if "error" in tool_args:
             return {
                 "tool": self.get_name(),
@@ -67,7 +62,6 @@ No extra text.
                 "message": f"LLM extraction error: {tool_args['error']}"
             }
 
-        # 3) Validate with Pydantic
         try:
             task_input = CreateTaskInput(**tool_args)
         except Exception as e:
@@ -77,7 +71,6 @@ No extra text.
                 "message": f"Invalid parameters: {str(e)}"
             }
 
-        # 4) Create in Google Tasks
         new_task = self._create_task_in_gtasks(task_input)
         return {
             "tool": self.get_name(),
@@ -95,9 +88,6 @@ No extra text.
             "message": f"Found {len(tasks)} tasks."
         }
 
-    # ------------------------------------------------
-    # Google Tasks integration
-    # ------------------------------------------------
     def _create_task_in_gtasks(self, task_input: CreateTaskInput):
         service = self._get_tasks_service()
         body = {"title": task_input.title}
