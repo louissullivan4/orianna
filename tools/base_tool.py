@@ -53,11 +53,8 @@ class BaseTool(ABC):
         """
         system_prompt = self.get_system_prompt()
 
-        # Get current date/time in a friendly or ISO format
-        # e.g., "2025-03-10T12:34:56Z"
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-        # Append a line telling the LLM "Today is <some date/time>"
         final_prompt = (
             f"{system_prompt}\n"
             f"Today is {now}.\n"
