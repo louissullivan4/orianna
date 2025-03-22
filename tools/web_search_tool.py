@@ -1,11 +1,14 @@
-import json
 import requests
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 from tools.base_tool import BaseTool
+from dotenv import load_dotenv
+import os
 
-GOOGLE_SEARCH_API_KEY = "AIzaSyCMFKRAd6Oo6vjSZZcaV00bJyR28ykHpDM"
-GOOGLE_SEARCH_ENGINE_ID = "d0df8efc206344b23"
+load_dotenv()
+
+GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
+GOOGLE_SEARCH_ENGINE_ID = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
 
 class WebSearchInput(BaseModel):
     query: str = Field(..., description="The search query to look up on the internet.")
