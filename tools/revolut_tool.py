@@ -38,9 +38,7 @@ class RevolutTool(BaseTool):
         pd.DataFrame(transactions).to_excel(output_xlsx_path, index=False)
         pd.DataFrame(transactions).to_csv(os.path.join(os.path.dirname(__file__), "input_files", "new1.csv"), index=False)
         pd.DataFrame(transactions).to_string(os.path.join(os.path.dirname(__file__), "input_files", "new2.txt"), index=False)
-        
-        # gst = GoogleSheetsTool()
-        
+                
         return {"tool": self.get_name(), "action": "update_transactions", "message": f"Updated transactions in '{output_xlsx_path}'."}
     
     def _get_grouping(self, description: str, txn_type: str) -> str:

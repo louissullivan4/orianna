@@ -1,14 +1,18 @@
 import os
 import pickle
 import re
+import json
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from pydantic import BaseModel, Field
 
 from tools.base_tool import BaseTool
+
+load_dotenv()
 
 BASE_DIR = os.path.dirname(__file__)
 PICKLES_DIR = os.path.join(BASE_DIR, "pickles")
@@ -18,12 +22,18 @@ GMAIL_CREDS_FILE = "google_credentials.json"
 TOKEN_PATH = os.path.join(PICKLES_DIR, GMAIL_TOKEN_FILE)
 CREDS_PATH = os.path.join(CONFIG_DIR, GMAIL_CREDS_FILE)
 
+credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+google_credentials = None
+if credentials_json:
+    try:
+        google_credentials = json.loads(credentials_json)
+    except json.JSONDecodeError as e:
+        raise ValueError("Invalid JSON in GOOGLE_CREDENTIALS_JSON") from e
 
 class CheckGmailInboxInput(BaseModel):
     label_id: str = Field(default="INBOX")
     max_results: int = Field(default=5)
     sender_filter: Optional[str] = Field(default=None)
-
 
 class GmailTool(BaseTool):
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
@@ -139,11 +149,15 @@ class GmailTool(BaseTool):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, self.SCOPES)
+            if google_credentials:
+                flow = InstalledAppFlow.from_client_config(google_credentials, self.SCOPES)
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, self.SCOPES)
             creds = flow.run_local_server(port=0)
         return creds
 
     def _save_credentials(self, creds):
+        os.makedirs(PICKLES_DIR, exist_ok=True)
         with open(TOKEN_PATH, "wb") as token:
             pickle.dump(creds, token)
 

@@ -1,11 +1,23 @@
 import os
 import pickle
+import json
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from tools.base_tool import BaseTool
+from dotenv import load_dotenv
+
+load_dotenv()
+
+credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+google_credentials = None
+if credentials_json:
+    try:
+        google_credentials = json.loads(credentials_json)
+    except json.JSONDecodeError as e:
+        raise ValueError("Invalid JSON in GOOGLE_CREDENTIALS_JSON") from e
 
 class CreateTaskInput(BaseModel):
     title: str = Field(..., description="Title of the task")
@@ -79,7 +91,10 @@ class GoogleTasksTool(BaseTool):
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(self.CREDS_FILE, self.SCOPES)
+                if google_credentials:
+                    flow = InstalledAppFlow.from_client_config(google_credentials, self.SCOPES)
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(self.CREDS_FILE, self.SCOPES)
                 creds = flow.run_local_server(port=0)
             with open(self.TOKEN_PATH, "wb") as token:
                 pickle.dump(creds, token)

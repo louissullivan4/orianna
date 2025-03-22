@@ -1,10 +1,12 @@
 import os
 import pickle
+import json
 from datetime import datetime, timedelta, timezone, time
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional
 
 import pytz
+from dotenv import load_dotenv  # Added to load .env file
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -12,12 +14,21 @@ from pydantic import BaseModel, Field
 
 from tools.base_tool import BaseTool
 
+load_dotenv()
+
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 API_NAME = "calendar"
 API_VERSION = "v3"
 TOKEN_FILE = "google_calendar_token.pickle"
 CREDS_FILE_NAME = "google_credentials.json"
 
+credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+google_credentials = None
+if credentials_json:
+    try:
+        google_credentials = json.loads(credentials_json)
+    except json.JSONDecodeError as e:
+        raise ValueError("Invalid JSON in GOOGLE_CREDENTIALS_JSON") from e
 
 class CreateCalendarEventInput(BaseModel):
     summary: str
@@ -26,11 +37,9 @@ class CreateCalendarEventInput(BaseModel):
     location: Optional[str] = None
     description: Optional[str] = None
 
-
 class GetCalendarEventInput(BaseModel):
     context: str = Field(..., description="Time context: e.g., 'today', 'tomorrow', 'next week'")
     max_results: Optional[int] = Field(5, description="Maximum number of events to retrieve.")
-
 
 class GoogleCalendarTool(BaseTool):
     def __init__(self) -> None:
@@ -38,6 +47,7 @@ class GoogleCalendarTool(BaseTool):
         base_dir = os.path.dirname(__file__)
         self.token_path = os.path.join(base_dir, "pickles", TOKEN_FILE)
         self.creds_path = os.path.join(base_dir, "config", CREDS_FILE_NAME)
+        os.makedirs(os.path.dirname(self.token_path), exist_ok=True)
 
     def get_name(self) -> str:
         return "calendar_tool"
@@ -61,7 +71,6 @@ class GoogleCalendarTool(BaseTool):
         if intent == "create calendar event":
             return self._create_event_flow(user_text)
         elif intent == "list calendar events":
-            # Extract context from user_text
             context = self._extract_context(user_text)
             input_params = GetCalendarEventInput(context=context)
             events = self._fetch_events_by_context(input_params)
@@ -88,7 +97,6 @@ class GoogleCalendarTool(BaseTool):
         elif "today" in lower_text:
             return "today"
         else:
-            # Default to next 7 days if no clear context is found.
             return "next 7 days"
 
     def _create_event_flow(self, user_text: str) -> Dict[str, Any]:
@@ -129,17 +137,14 @@ class GoogleCalendarTool(BaseTool):
             start_local = datetime.combine(tomorrow, time.min).replace(tzinfo=dublin_tz)
             end_local = datetime.combine(tomorrow, time.max).replace(tzinfo=dublin_tz)
         elif input_params.context.lower() == "next week":
-            # Calculate next Monday (start of next week)
-            days_ahead = 7 - now_local.weekday()  # weekday(): Monday=0 ... Sunday=6
+            days_ahead = 7 - now_local.weekday()
             if days_ahead == 0:
                 days_ahead = 7
             next_monday = now_local.date() + timedelta(days=days_ahead)
-            # End on next Sunday
             next_sunday = next_monday + timedelta(days=6)
             start_local = datetime.combine(next_monday, time.min).replace(tzinfo=dublin_tz)
             end_local = datetime.combine(next_sunday, time.max).replace(tzinfo=dublin_tz)
         else:
-            # Default: next 7 days from now
             start_local = now_local
             end_local = now_local + timedelta(days=7)
 
@@ -173,8 +178,8 @@ class GoogleCalendarTool(BaseTool):
 
         event_body = {
             "summary": event_input.summary,
-            "start": {"dateTime": (start_dt_utc).isoformat()},
-            "end": {"dateTime": (end_dt_utc).isoformat()},
+            "start": {"dateTime": start_dt_utc.isoformat()},
+            "end": {"dateTime": end_dt_utc.isoformat()},
         }
         if event_input.location:
             event_body["location"] = event_input.location
@@ -203,7 +208,6 @@ class GoogleCalendarTool(BaseTool):
     def _get_event_summaries(self, events: list) -> str:
         summary_str = f"Found {len(events)} upcoming events. "
         for event in events:
-            print(event)
             event_summary = event.get("summary", "No summary")
             start_info = event.get("start", {})
             start_dt = self._convert_to_readable(start_info)
@@ -240,7 +244,10 @@ class GoogleCalendarTool(BaseTool):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(self.creds_path, SCOPES)
+            if google_credentials:
+                flow = InstalledAppFlow.from_client_config(google_credentials, SCOPES)
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(self.creds_path, SCOPES)
             creds = flow.run_local_server(port=0)
         return creds
 

@@ -1,5 +1,6 @@
 import os
 import pickle
+import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -7,6 +8,17 @@ import pandas as pd
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from dotenv import load_dotenv
+
+load_dotenv()
+
+credentials_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+google_credentials = None
+if credentials_json:
+    try:
+        google_credentials = json.loads(credentials_json)
+    except json.JSONDecodeError as e:
+        raise ValueError("Invalid JSON in GOOGLE_CREDENTIALS_JSON") from e
 
 class GoogleSheetsTool():
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -50,7 +62,10 @@ class GoogleSheetsTool():
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(self.CREDS_FILE, self.SCOPES)
+                if google_credentials:
+                    flow = InstalledAppFlow.from_client_config(google_credentials, self.SCOPES)
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(self.CREDS_FILE, self.SCOPES)
                 creds = flow.run_local_server(port=0)
             with open(self.TOKEN_PATH, "wb") as token:
                 pickle.dump(creds, token)
@@ -86,9 +101,7 @@ class GoogleSheetsTool():
     def _append_rows_to_sheet(self, values: List[List[Any]]):
         service = self._get_sheets_service()
         range_name = f"{self.SHEET_NAME}!A1"
-        body = {
-            "values": values
-        }
+        body = {"values": values}
         result = service.spreadsheets().values().append(
             spreadsheetId=self.SPREADSHEET_ID,
             range=range_name,
