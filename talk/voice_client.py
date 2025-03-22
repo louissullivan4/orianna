@@ -5,34 +5,27 @@ import requests
 import speech_recognition as sr
 import pyttsx3
 
-# Configure logging for detailed output.
 logging.basicConfig(level=logging.INFO)
 
-# Allow the server URL to be set via an environment variable.
 SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8012/process")
 
-# Expanded wake word list with different spellings and variations.
 WAKE_WORDS = [
     "hey orianna",
     "orianna",
     "ok orianna",
     "hello orianna",
     "hi orianna",
-    "hey oriana",    # common mis-spelling
-    "oriana",        # alternative pronunciation
-    "hai orianna",   # phonetic variant
+    "hey oriana",
+    "oriana",
+    "hai orianna",
     "oh orianna",
-    "hey, orianna",  # with punctuation
-    "hey oryanna",   # another mis-spelling
+    "hey, orianna",
+    "hey oryanna",
     "rihanna",
     "ariana"
 ]
 
 def init_tts_engine():
-    """
-    Initialize and configure the text-to-speech engine.
-    Chooses the second available voice if possible, sets a moderate speaking rate, and full volume.
-    """
     engine = pyttsx3.init()
     voices = engine.getProperty('voices')
     chosen_voice = voices[1].id if len(voices) > 1 else voices[0].id
@@ -44,27 +37,9 @@ def init_tts_engine():
 tts_engine = init_tts_engine()
 
 def process_tts_text(text):
-    """
-    Processes the text to be spoken by replacing 'Louis' with 'Louie'
-    to enforce the desired pronunciation.
-    
-    Parameters:
-        text (str): The original text.
-    
-    Returns:
-        str: The processed text with replacements applied.
-    """
-    # Replace whole word "louis" (case-insensitive) with "louie"
     return re.sub(r'\blouis\b', 'louie', text, flags=re.IGNORECASE)
 
 def speak_text(text):
-    """
-    Uses the TTS engine to speak the provided text after processing it
-    for custom pronunciations.
-    
-    Parameters:
-        text (str): The text to be spoken.
-    """
     processed_text = process_tts_text(text)
     try:
         tts_engine.say(processed_text)
@@ -73,21 +48,9 @@ def speak_text(text):
         logging.error(f"Error in text-to-speech: {e}")
 
 def record_and_transcribe(timeout=10000, phrase_time_limit=15):
-    """
-    Records audio from the microphone and transcribes it using Google's Speech Recognition.
-    
-    Parameters:
-        timeout (int): Maximum seconds to wait for a phrase to start.
-        phrase_time_limit (int): Maximum seconds for recording once a phrase starts.
-    
-    Returns:
-        str or None: The transcribed text if successful; otherwise, None.
-    """
     recognizer = sr.Recognizer()
     try:
         with sr.Microphone() as source:
-            # logging.info("Adjusting for ambient noise...")
-            # recognizer.adjust_for_ambient_noise(source, duration=1)
             logging.info("Listening for your command...")
             audio = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
     except sr.WaitTimeoutError:
@@ -108,15 +71,6 @@ def record_and_transcribe(timeout=10000, phrase_time_limit=15):
     return None
 
 def send_to_server(user_text):
-    """
-    Sends the transcribed text to the server and returns the JSON response.
-    
-    Parameters:
-        user_text (str): The text to be sent to the server.
-    
-    Returns:
-        dict or None: Parsed JSON response if successful; otherwise, None.
-    """
     try:
         headers = {"Content-Type": "text/plain"}
         response = requests.post(SERVER_URL, data=user_text, headers=headers, timeout=100000)
@@ -129,15 +83,6 @@ def send_to_server(user_text):
     return None
 
 def listen_for_wake_word(wake_words=WAKE_WORDS):
-    """
-    Continuously listens for any wake word from the provided list.
-    
-    Parameters:
-        wake_words (list): Phrases that will trigger the assistant.
-    
-    Returns:
-        bool: Returns True when a wake word is detected.
-    """
     recognizer = sr.Recognizer()
     with sr.Microphone() as source:
         logging.info("Calibrating microphone for wake word detection...")
@@ -152,18 +97,14 @@ def listen_for_wake_word(wake_words=WAKE_WORDS):
                     logging.info("Wake word detected!")
                     return True
             except sr.WaitTimeoutError:
-                continue  # No speech detected within the timeout.
+                continue
             except sr.UnknownValueError:
-                continue  # Speech was unintelligible.
+                continue
             except Exception as e:
                 logging.error(f"Error in wake word detection: {e}")
                 continue
 
 def voice_activation_loop():
-    """
-    Main loop that continuously listens for the wake word. Once triggered, it responds,
-    listens for a command, sends the command to the server, and then speaks the server's response.
-    """
     while True:
         if listen_for_wake_word():
             speak_text("Yes?")
