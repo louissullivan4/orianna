@@ -1,18 +1,10 @@
-# tools/base_tool.py
-
-from abc import ABC, abstractmethod
-from typing import Any, Dict
 import json
 import subprocess
 from datetime import datetime, timezone
+from abc import ABC, abstractmethod
+from typing import Any, Dict
 
 class BaseTool(ABC):
-    """
-    Base class that centralizes the local LLM extraction logic.
-    Each tool can override get_system_prompt() to define 
-    how the LLM should output fields for that tool.
-    """
-
     @abstractmethod
     def get_name(self) -> str:
         pass
@@ -23,58 +15,43 @@ class BaseTool(ABC):
 
     @abstractmethod
     def parse_and_execute(self, user_input: str, **kwargs) -> Dict[str, Any]:
-        """
-        Each tool still implements this to handle Pydantic validation 
-        and the final "action" logic. But it can call the shared 
-        '_extract_params_via_llm' method below.
-        """
         pass
 
     @abstractmethod
     def get_system_prompt(self) -> str:
-        """
-        Returns the system prompt instructions for the LLM, 
-        telling it how to structure the JSON output for this tool's parameters.
-        Example: 
-        {
-          "title": "<string>", 
-          "notes": "<string>", 
-          ...
-        }
-        """
         pass
 
+    def _summarize_via_llm(self, data: Any, summary_prompt: str, model_name="dolphin3") -> str:
+        if not isinstance(data, str):
+            input_str = json.dumps(data, ensure_ascii=False)
+        else:
+            input_str = data
+
+        final_prompt = f"{summary_prompt}\n\nData: {input_str}"
+        try:
+            response = self._call_llm(final_prompt, model_name=model_name)
+            return response.get("summary", "Summarization failed.")
+        except Exception as e:
+            return f"Summarization error: {str(e)}"
+        
     def _extract_params_via_llm(self, user_text: str, model_name="dolphin3") -> Dict[str, Any]:
-        """
-        A protected helper to do the local LLM call with your system prompt,
-        parse the JSON. If error, returns {"error": "..."}.
-        We add 'today' in ISO8601 so the LLM can interpret relative times 
-        (e.g., "tomorrow") more accurately.
-        """
         system_prompt = self.get_system_prompt()
-
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-
         final_prompt = (
             f"{system_prompt}\n"
             f"Today is {now}.\n"
             f"User text: {user_text}"
         )
+        return self._call_llm(final_prompt, model_name=model_name)
 
-        cmd = [
-            "ollama",
-            "run",
-            model_name,
-            final_prompt
-        ]
+    def _call_llm(self, final_prompt: str, model_name="dolphin3") -> Dict[str, Any]:
+        cmd = ["ollama", "run", model_name, final_prompt]
         try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            out, err = process.communicate()
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, encoding="utf-8")
+            out, err = proc.communicate()
             if err:
                 print("LLM error:", err)
-
-            parsed = json.loads(out.strip())
-            print("LLM output:", parsed)
-            return parsed
+            return json.loads(out.strip())
         except Exception as e:
             return {"error": str(e)}

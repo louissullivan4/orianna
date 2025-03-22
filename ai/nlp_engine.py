@@ -1,23 +1,24 @@
-# ai/nlp_engine.py
 from transformers import pipeline
 
 classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
+
 def process_user_input(user_input: str) -> dict:
     candidate_labels = [
         "check email",
-        "list calendar",
+        "list emails",
+        "read emails",
         "create calendar event",
-        "list tasks",
+        "list calendar events",
         "create task",
-        "unknown"
+        "list tasks",
+        "web search",
+        "update transactions",
+        "unknown",
     ]
     result = classifier(user_input, candidate_labels)
-    top_label = result["labels"][0]
-    score = result["scores"][0]
-
     return {
-        "intent": top_label,
-        "confidence": score,
-        "original_text": user_input
+        "intent": result["labels"][0],
+        "confidence": result["scores"][0],
+        "original_text": user_input,
     }
