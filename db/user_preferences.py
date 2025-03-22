@@ -1,26 +1,10 @@
-from .mongo_client import get_database
+from db.mongo_client import get_database
 
 def get_user_preference(user_id: str, pref_key: str):
-    """
-    Retrieves a specific preference for a given user from MongoDB.
-    """
     db = get_database()
-    prefs_col = db["user_preferences"]
-    
-    doc = prefs_col.find_one({"user_id": user_id})
-    if doc and pref_key in doc:
-        return doc[pref_key]
-    return None
+    doc = db["user_preferences"].find_one({"user_id": user_id})
+    return doc.get(pref_key) if doc and pref_key in doc else None
 
 def set_user_preference(user_id: str, pref_key: str, pref_value):
-    """
-    Sets/updates a user preference in MongoDB.
-    """
     db = get_database()
-    prefs_col = db["user_preferences"]
-    
-    prefs_col.update_one(
-        {"user_id": user_id},
-        {"$set": {pref_key: pref_value}},
-        upsert=True
-    )
+    db["user_preferences"].update_one({"user_id": user_id}, {"$set": {pref_key: pref_value}}, upsert=True)

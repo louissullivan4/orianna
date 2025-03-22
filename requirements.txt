@@ -8,3 +8,6 @@ transformers
 torch
 pymongo
 dateparser
+SpeechRecognition
+pyttsx3
+PyAudio
